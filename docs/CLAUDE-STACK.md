@@ -55,6 +55,8 @@ Project creation also enables these APIs (all `*.googleapis.com`) — treat them
 - **User-consented data** — `gmail`, `calendar-json` (pairs with the consent flow's default `ADMIN_CONSENTS` scopes)
 - **Plumbing** — `cloudbilling`, `apikeys`
 
+**Pre-provisioned means use-it-by-default.** When a task needs a capability this list already covers, the enabled service IS the choice — do not substitute an outside provider, and treat a missing API key as a signal to use the platform, not to improvise a workaround. The canonical case is AI: call **Gemini through Vertex AI** (`aiplatform.googleapis.com`, authenticated with the standard Google token — `cmd-auth.mjs` locally, ADC in Functions), **not** the Gemini direct API (`generativelanguage.googleapis.com` with an API key) and not another vendor (Anthropic/OpenAI — no such credentials are provisioned).
+
 Anything not listed (Sheets, Drive, Maps, …) is **not** enabled. Enabling one is part of the feature work, not a user chore: get a token per docs/CLAUDE-DEPLOY.md, `POST https://serviceusage.googleapis.com/v1/projects/<pid>/services/<api>:enable`, and mention to the user that a new Google service was switched on for their project.
 
 ---
