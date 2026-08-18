@@ -10,7 +10,7 @@
 
 <div class="flex min-h-screen flex-col">
   <AppHeader />
-  <div class="flex flex-1 items-center justify-center px-6 text-fg-faint">
+  <div class="text-fg-faint flex flex-1 items-center justify-center px-6">
     ah, one day a home page here.
   </div>
 </div>

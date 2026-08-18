@@ -26,7 +26,7 @@
     const current = new URL(href);
     const continueUrl = current.searchParams.get('continueUrl');
     if (continueUrl) {
-      let target: URL | null = null;
+      let target: URL | null;
       try {
         target = new URL(continueUrl);
       } catch {
@@ -57,7 +57,11 @@
       // Best-effort enrichment of the whitelist row with uid +
       // lastSignInAt. Failure shouldn't block the redirect — the
       // user is signed in either way; the next sign-in will retry.
-      try { await usersStore.recordSignIn(user); } catch { /* swallow */ }
+      try {
+        await usersStore.recordSignIn(user);
+      } catch {
+        /* swallow */
+      }
       status = 'done';
       goto('/admin', { replaceState: true });
     } catch (e) {
@@ -77,7 +81,11 @@
     e.preventDefault();
     try {
       const user = await AuthService.completeEmailLink(window.location.href, email.trim());
-      try { await usersStore.recordSignIn(user); } catch { /* swallow */ }
+      try {
+        await usersStore.recordSignIn(user);
+      } catch {
+        /* swallow */
+      }
       status = 'done';
       goto('/admin', { replaceState: true });
     } catch (err) {
@@ -94,8 +102,8 @@
     <div class="space-y-3">
       <div class="section-label">confirm your email</div>
       <p>
-        looks like you opened the link on a different device. enter the email you signed in with
-        to finish:
+        looks like you opened the link on a different device. enter the email you signed in with to
+        finish:
       </p>
       <form onsubmit={submitEmail} class="space-y-3">
         <input

@@ -9,7 +9,7 @@ export default {
       assets: 'build',
       fallback: 'index.html',
       precompress: false,
-      strict: true
+      strict: true,
     }),
     // `$common` resolves to functions/src/common — the single home for
     // browser-safe code shared between client and functions: zod schemas
@@ -17,7 +17,7 @@ export default {
     // ../docs/CLAUDE-STACK.md). Files there must stay browser-safe (no
     // firebase-admin / Node-only imports) so this client bundle works.
     alias: {
-      $common: '../functions/src/common'
-    }
-  }
+      $common: '../functions/src/common',
+    },
+  },
 };

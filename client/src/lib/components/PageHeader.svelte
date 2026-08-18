@@ -21,7 +21,7 @@
 <header>
   <h1 class="font-bold">{title}</h1>
   {#if description}
-    <p class="mt-2 text-[15px] text-fg-faint">{description}</p>
+    <p class="text-fg-faint mt-2 text-[15px]">{description}</p>
   {/if}
-  <hr class="mt-2 border-t border-border" />
+  <hr class="border-border mt-2 border-t" />
 </header>

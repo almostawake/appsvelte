@@ -34,16 +34,18 @@
   }
 </script>
 
-<svelte:window onclick={(e) => {
-  const target = e.target as HTMLElement;
-  if (!target.closest('[data-menu-root]')) closeMenu();
-}} />
+<svelte:window
+  onclick={(e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('[data-menu-root]')) closeMenu();
+  }}
+/>
 
-<header class="flex h-16 items-center border-b border-border bg-bg-soft px-3">
+<header class="border-border bg-bg-soft flex h-16 items-center border-b px-3">
   {#if authStore.loaded && authStore.isAdmin === true}
     <div data-menu-root class="relative">
       <button
-        class="flex h-14 w-14 items-center justify-center rounded hover:bg-bg-hover"
+        class="hover:bg-bg-hover flex h-14 w-14 items-center justify-center rounded"
         onclick={toggleMenu}
         aria-label="Menu"
         aria-expanded={menuOpen}
@@ -57,22 +59,18 @@
           single source of nav truth.
         -->
         <nav
-          class="absolute left-0 top-full mt-1 min-w-[180px] border border-border bg-white shadow-sm"
+          class="border-border absolute top-full left-0 mt-1 min-w-[180px] border bg-white shadow-sm"
         >
           <ul>
             <li>
-              <a
-                href="/admin"
-                onclick={closeMenu}
-                class="block px-3 py-2 hover:bg-bg-hover"
-              >
+              <a href="/admin" onclick={closeMenu} class="hover:bg-bg-hover block px-3 py-2">
                 users
               </a>
             </li>
-            <li class="border-t border-border">
+            <li class="border-border border-t">
               <button
                 type="button"
-                class="block w-full px-3 py-2 text-left hover:bg-bg-hover"
+                class="hover:bg-bg-hover block w-full px-3 py-2 text-left"
                 onclick={handleSignOut}
               >
                 sign out
@@ -82,7 +80,7 @@
         </nav>
       {/if}
     </div>
-    <div class="ml-auto text-[15px] text-fg-faint">
+    <div class="text-fg-faint ml-auto text-[15px]">
       {authStore.user?.email ?? ''}
     </div>
   {:else if authStore.loaded}

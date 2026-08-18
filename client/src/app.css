@@ -11,8 +11,7 @@
   --color-accent: #3949ab;
   --color-ok: #070;
   --color-err: #b33;
-  --font-mono:
-    'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
 
   /* Horizontal indent shared by all in-app page content. Pinned to where
      the menu icon's *visible* left edge falls inside the header button:

@@ -4,7 +4,7 @@ import {
   signInWithEmailLink,
   signOut as fbSignOut,
   onAuthStateChanged,
-  type User
+  type User,
 } from 'firebase/auth';
 import { getFirebase } from '$lib/firebase/init';
 
@@ -20,7 +20,7 @@ export const AuthService = {
     const url = `${window.location.origin}/auth/action`;
     await sendSignInLinkToEmail(auth, email, {
       url,
-      handleCodeInApp: true
+      handleCodeInApp: true,
     });
     // signInWithEmailLink requires the email back at consumption time
     // (Firebase doesn't put it in the link, to prevent session-fixation
@@ -50,7 +50,10 @@ export const AuthService = {
   async completeEmailLink(href: string, emailOverride?: string): Promise<User> {
     const { auth } = getFirebase();
     const email = emailOverride ?? window.localStorage.getItem(PENDING_EMAIL_KEY);
-    if (!email) throw new Error('No email available — open the link on the same device, or re-enter the email.');
+    if (!email)
+      throw new Error(
+        'No email available — open the link on the same device, or re-enter the email.',
+      );
     const cred = await signInWithEmailLink(auth, email, href);
     window.localStorage.removeItem(PENDING_EMAIL_KEY);
     return cred.user;
@@ -64,7 +67,7 @@ export const AuthService = {
   observe(cb: (user: User | null) => void): () => void {
     const { auth } = getFirebase();
     return onAuthStateChanged(auth, cb);
-  }
+  },
 };
 
 /**

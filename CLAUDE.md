@@ -14,6 +14,7 @@ Three surfaces:
 
 ## Environments
 
+- **You run inside the Claude Code desktop app.** There is no VS Code and no `code` CLI on these machines — never suggest opening files in an editor; show content in the conversation or point at the file path. "Open the app" means the browser (local dev server by default).
 - **Local dev** = Firebase emulators + Vite dev server: `npm run start:emulators` / `npm run start:client` — never raw `firebase` commands. The owner's whitelist entry is auto-seeded and the magic sign-in link is auto-followed in DEV; no manual fetching in the happy path.
 - **Hosted** = one Google Cloud project per checkout, identified by `.env` (gitignored): `THIS_PROJECT_ID_ON_GOOGLE_HOSTING`, `THIS_PROJECT_REGION_ON_GOOGLE_HOSTING`, `EMAIL_OF_GOOGLE_HOSTING_ACCOUNT`. Deploys go through `npm run deploy*` only — the wrapper handles credentials itself. **Never deploy unless the user explicitly asks.**
 
@@ -49,7 +50,7 @@ The user is a non-developer — a business analyst, project manager, or team lea
 
 ## Before committing
 
-- Run `npm run check` before completing any code-centric task/conversation (`svelte-check` + `eslint`). Don't commit without it passing.
+- Run `npm run check` before completing any code-centric task/conversation (`svelte-check` + `tsc` + `eslint`). Don't commit without it passing. `npm run format` (Prettier) keeps style uniform — run it on files you touched.
 - If behaviour changed, update **docs/PROJECT.md** — and any affected docs/CLAUDE-*.md — in the same commit.
 - Ask before committing. Other changes may have occurred — summarise all changes in the commit message.
 

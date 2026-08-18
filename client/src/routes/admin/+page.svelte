@@ -56,10 +56,7 @@
   }
 </script>
 
-<Page
-  title="users"
-  description="these users can sign in to /admin and manage this list."
->
+<Page title="users" description="these users can sign in to /admin and manage this list.">
   <ul class="space-y-1">
     {#each usersStore.users as item (item.email)}
       <li class="group flex items-center gap-2">
@@ -73,7 +70,7 @@
           -->
           <button
             type="button"
-            class="group/del inline-flex items-center gap-2 text-err opacity-0 group-hover:opacity-100"
+            class="group/del text-err inline-flex items-center gap-2 opacity-0 group-hover:opacity-100"
             onclick={() => remove(item.email)}
             aria-label="delete {item.email}"
           >
@@ -89,7 +86,7 @@
     {#if !adding}
       <button
         type="button"
-        class="group inline-flex items-center gap-2 text-fg-faint hover:text-fg"
+        class="group text-fg-faint hover:text-fg inline-flex items-center gap-2"
         onclick={startAdd}
         aria-label="add a user"
       >
@@ -105,7 +102,9 @@
           bind:this={inputEl}
           placeholder="email@domain"
           bind:value={newEmail}
-          onkeydown={(e) => { if (e.key === 'Escape') cancelAdd(); }}
+          onkeydown={(e) => {
+            if (e.key === 'Escape') cancelAdd();
+          }}
         />
         <button class="tx-btn" type="submit" disabled={saving || !newEmail.trim()}>
           {saving ? '…' : 'add'}
@@ -116,6 +115,6 @@
   </div>
 
   {#if error}
-    <div class="mt-3 text-err">{error}</div>
+    <div class="text-err mt-3">{error}</div>
   {/if}
 </Page>

@@ -17,7 +17,7 @@ export default defineConfig({
     // ↔ https://<project>.web.app/consent).
     proxy: {
       '/consent': 'http://localhost:5001/demo-not-required/australia-southeast1/api',
-      '/oauth': 'http://localhost:5001/demo-not-required/australia-southeast1/api'
-    }
-  }
+      '/oauth': 'http://localhost:5001/demo-not-required/australia-southeast1/api',
+    },
+  },
 });

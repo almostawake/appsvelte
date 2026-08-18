@@ -41,10 +41,10 @@
 </script>
 
 {#if authStore.loaded && authStore.isAdmin === true}
-<div class="flex min-h-screen flex-col">
-  <AppHeader />
+  <div class="flex min-h-screen flex-col">
+    <AppHeader />
 
-  <!--
+    <!--
     Page-content gutter: pl uses --page-gutter (= the menu icon's visible
     left edge, defined in app.css) so every admin page aligns with the
     menu icon. New pages should not add their own horizontal padding —
@@ -54,8 +54,8 @@
     filling the remaining height; pages that just stack content at the
     top need no extra classes.
   -->
-  <main class="flex flex-1 flex-col overflow-auto py-4 pr-3 pl-[var(--page-gutter)]">
-    {@render children()}
-  </main>
-</div>
+    <main class="flex flex-1 flex-col overflow-auto py-4 pr-3 pl-[var(--page-gutter)]">
+      {@render children()}
+    </main>
+  </div>
 {/if}

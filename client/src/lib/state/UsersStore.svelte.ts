@@ -1,12 +1,4 @@
-import {
-  collection,
-  onSnapshot,
-  doc,
-  setDoc,
-  deleteDoc,
-  query,
-  orderBy
-} from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import type { User as FbUser } from 'firebase/auth';
 import { getFirebase } from '$lib/firebase/init';
 import { userSchema, type User } from '$common/User';
@@ -30,7 +22,7 @@ class UsersStore {
       (err) => {
         this.error = err.message;
         this.loaded = true;
-      }
+      },
     );
   };
 
@@ -43,12 +35,15 @@ class UsersStore {
     const e = email.trim().toLowerCase();
     if (!e) throw new Error('Email is required');
     const { db } = getFirebase();
-    await setDoc(doc(db, 'users', e), userSchema.parse({
-      email: e,
-      admin: true,
-      addedAt: Date.now(),
-      addedBy
-    } satisfies User));
+    await setDoc(
+      doc(db, 'users', e),
+      userSchema.parse({
+        email: e,
+        admin: true,
+        addedAt: Date.now(),
+        addedBy,
+      } satisfies User),
+    );
   };
 
   remove = async (email: string) => {
@@ -66,7 +61,7 @@ class UsersStore {
     await setDoc(
       doc(db, 'users', user.email.toLowerCase()),
       { uid: user.uid, lastSignInAt: Date.now() },
-      { merge: true }
+      { merge: true },
     );
   };
 }

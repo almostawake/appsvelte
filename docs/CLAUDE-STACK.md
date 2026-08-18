@@ -27,7 +27,7 @@ The stack is chosen to maximise **first-shot correctness from LLMs**. That means
 | Email (outbound) | **Gmail API**, sending from the user's own Gmail account | Avoids Resend/SendGrid account setup. |
 | Notifications (push to phone) | **Ntfy** (`ntfy.sh`) | Zero-account, free, one `fetch` call. Topic lives in `functions/.env`. |
 | Local dev | **Firebase emulator suite** | Free local emulation is a hard requirement — see ../CLAUDE.md. |
-| Lint/format | **ESLint + Prettier + svelte-check** | `npm run check` = `svelte-check && eslint .` |
+| Lint/format | **ESLint + Prettier + svelte-check** | `npm run check` = `svelte-check && tsc && eslint .`; `npm run format` = Prettier (svelte + tailwind class sorting) |
 
 ---
 
@@ -253,7 +253,7 @@ A `SchemaService` owns a `CURRENT_SCHEMA` version and a migration chain. `migrat
 ```json
 {
   "scripts": {
-    "check": "svelte-check --tsconfig ./tsconfig.json && eslint .",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && eslint .",
     "dev": "vite dev",
     "build": "npm run check && vite build"
   }
