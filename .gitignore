@@ -39,3 +39,6 @@ firebase-export-*/
 
 # OS
 .DS_Store
+
+# Personal Claude Code overrides — never ship local permission grants
+.claude/settings.local.json
