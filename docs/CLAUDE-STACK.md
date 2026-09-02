@@ -52,6 +52,7 @@ Project creation also enables these APIs (all `*.googleapis.com`) — treat them
 - **Functions deploy/runtime chain** — `cloudfunctions`, `cloudbuild`, `run`, `artifactregistry`, `eventarc`, `pubsub`
 - **Scheduled jobs** — `cloudscheduler` (`onSchedule` triggers work with no extra setup)
 - **AI** — `aiplatform` (Vertex AI → Gemini). The Functions runtime service account already holds `roles/aiplatform.user` — Gemini calls from Functions need no extra IAM.
+- **Speech-to-text** — `speech` (Cloud Speech-to-Text). Transcribe audio from Functions with the runtime SA's own ADC token — no API key, no outside transcription vendor. If a call ever returns `PERMISSION_DENIED`, grant the runtime SA `roles/speech.client` as part of the feature work.
 - **User-consented data** — `gmail`, `calendar-json` (pairs with the consent flow's default `ADMIN_CONSENTS` scopes)
 - **Plumbing** — `cloudbilling`, `apikeys`
 
