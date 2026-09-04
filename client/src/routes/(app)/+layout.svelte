@@ -1,8 +1,12 @@
 <!--
-  Admin-only gate + chrome. Every page under /admin/* renders inside
-  this layout, so the auth check + admin-whitelist check fire once for
-  the whole subtree. End-user pages (everything outside /admin) sit
-  outside this layout and are anonymous-browsable.
+  The signed-in surface: gate + chrome. `(app)` is a SvelteKit layout
+  GROUP — the parentheses keep it out of the URL, so pages inside it live
+  at root level (/users, and /scopes etc. later) while still sharing one
+  auth check. That's the whole reason for the group: without it each
+  top-level page would have to re-implement the gate.
+
+  Only the sign-in screen at / sits outside. There is no anonymous
+  surface in this app.
 -->
 <script lang="ts">
   import { goto } from '$app/navigation';
@@ -13,20 +17,20 @@
 
   let { children }: { children: Snippet } = $props();
 
-  // Gate for /admin/*. Three states once `loaded` resolves:
-  //   no user           → /login
-  //   user, not admin   → sign out, /login?denied=1
+  // Three states once `loaded` resolves:
+  //   no user           → / (sign in)
+  //   user, not admin   → sign out, /?denied=1
   //   user, admin       → render the page
   // The template below is also gated on `loaded && isAdmin === true`,
-  // so admin chrome (menu, signed-in mobile, etc.) never paints for
+  // so the chrome (menu, signed-in mobile, etc.) never paints for
   // non-admins. Without that gate the layout flashed briefly before
   // this effect's redirect could fire.
   $effect(() => {
     if (!authStore.loaded) return;
     if (!authStore.user) {
-      goto('/login', { replaceState: true });
+      goto('/', { replaceState: true });
     } else if (authStore.isAdmin === false) {
-      authStore.signOut().then(() => goto('/login?denied=1', { replaceState: true }));
+      authStore.signOut().then(() => goto('/?denied=1', { replaceState: true }));
     }
   });
 
@@ -46,9 +50,9 @@
 
     <!--
     Page-content gutter: pl uses --page-gutter (= the menu icon's visible
-    left edge, defined in app.css) so every admin page aligns with the
-    menu icon. New pages should not add their own horizontal padding —
-    they inherit this.
+    left edge, defined in app.css) so every page aligns with the menu
+    icon. New pages should not add their own horizontal padding — they
+    inherit this.
 
     `flex flex-col` makes <main> a flex column so a page can opt into
     filling the remaining height; pages that just stack content at the

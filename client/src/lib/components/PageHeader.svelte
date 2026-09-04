@@ -1,5 +1,5 @@
 <!--
-  Standard header for any "main" page inside the /admin layout. Render
+  Standard header for any "main" page inside the (app) layout. Render
   at the top of the page, before the page's content.
 
     <PageHeader title="admins" description="…" />

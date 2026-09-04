@@ -43,17 +43,17 @@ Verify shutdown: `lsof -i :4000 -i :4400 -i :9099 -i :5001 -i :8080 -i :9199 >/d
 
 ## Users whitelist seed
 
-Only `/admin` is gated; end users at `/` are anonymous. The gate rejects sign-in unless the user's mobile exists at Firestore `/users/{+614XXXXXXXX}`.
+Everything except the sign-in screen at `/` is gated. The gate rejects sign-in unless the user's mobile exists at Firestore `/users/{+614XXXXXXXX}`.
 
 **Auto-seeded on every `npm run start:emulators`** by `cmd-seed-user.mjs` — backgrounded at emulator start, waits for Firestore readiness, reads the owner's mobile from `MOBILE_OF_APP_OWNER` in `.env`, normalises it to E.164, writes the doc if missing. Idempotent. No action required from you on a normal start.
 
-To add a *different* email manually (e.g. seeding a second user before they can be added through `/admin` itself):
+To add a *different* number manually (e.g. seeding a second user before they can be added through `/users` itself). Note the `%2B` — a bare `+` in the documentId query param decodes to a space and writes the row under the wrong id:
 
 ```sh
-EMAIL=alice@example.com
+MOBILE=+61499888777
 curl -s -X POST -H "Authorization: Bearer owner" -H "Content-Type: application/json" \
-  "http://localhost:8080/v1/projects/demo-not-required/databases/(default)/documents/users?documentId=$EMAIL" \
-  -d "{\"fields\":{\"email\":{\"stringValue\":\"$EMAIL\"},\"admin\":{\"booleanValue\":true},\"addedAt\":{\"integerValue\":\"$(date +%s)000\"},\"addedBy\":{\"stringValue\":\"bootstrap\"}}}"
+  "http://localhost:8080/v1/projects/demo-not-required/databases/(default)/documents/users?documentId=%2B${MOBILE#+}" \
+  -d "{\"fields\":{\"mobile\":{\"stringValue\":\"$MOBILE\"},\"admin\":{\"booleanValue\":true},\"addedAt\":{\"integerValue\":\"$(date +%s)000\"},\"addedBy\":{\"stringValue\":\"bootstrap\"}}}"
 ```
 
 The `Authorization: Bearer owner` header is the emulator's admin bypass — skips security rules for local seeding.

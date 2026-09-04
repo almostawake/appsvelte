@@ -1,15 +1,12 @@
 <!--
-  Shared top bar ("nav bar") used by the public home page and the
-  /admin layout. Two states:
+  Top bar for the signed-in surface — the (app) layout group is the only
+  thing that renders it. Hamburger menu top left (pages + sign out), the
+  signed-in mobile top right.
 
-    signed-in whitelisted user → hamburger menu top left (admin pages +
-                                 sign out) and the signed-in mobile top right
-    everyone else              → "sign in" link top right
-
-  Importing this pulls in authStore, which initializes Firebase — so the
-  public `/` page now initializes Firebase Auth purely to *read* session
-  state. Anonymous visitors still have no data path (docs/CLAUDE-AUTH.md);
-  nothing here gates the page it sits on.
+  It still checks `isAdmin === true` before painting anything, even though
+  its layout already gates on the same condition: the layout's redirect
+  runs in an effect, so there is one frame where a non-admin would
+  otherwise see admin chrome.
 -->
 <script lang="ts">
   import { goto } from '$app/navigation';
@@ -28,8 +25,9 @@
 
   async function handleSignOut() {
     closeMenu();
-    // Navigate home BEFORE signing out: once off /admin its gate effect
-    // is gone, so it can't race this with its own redirect to /login.
+    // Navigate to the sign-in screen BEFORE signing out: once off the
+    // (app) layout its gate effect is gone, so it can't race this with a
+    // redirect of its own.
     await goto('/', { replaceState: true });
     await authStore.signOut();
   }
@@ -55,16 +53,17 @@
       </button>
       {#if menuOpen}
         <!--
-          New admin pages (e.g. /admin/scopes) should add themselves here
-          in the same shape — a li with an anchor — so the menu stays the
-          single source of nav truth.
+          New pages (e.g. /scopes) should add themselves here in the same
+          shape — a li with an anchor — so the menu stays the single
+          source of nav truth. They live under routes/(app)/ to inherit
+          the auth gate.
         -->
         <nav
           class="border-border absolute top-full left-0 mt-1 min-w-[180px] border bg-white shadow-sm"
         >
           <ul>
             <li>
-              <a href="/admin" onclick={closeMenu} class="hover:bg-bg-hover block px-3 py-2">
+              <a href="/users" onclick={closeMenu} class="hover:bg-bg-hover block px-3 py-2">
                 users
               </a>
             </li>
@@ -84,8 +83,7 @@
     <div class="text-fg-faint ml-auto text-[15px]">
       {authStore.user?.phoneNumber ? formatAuMobile(authStore.user.phoneNumber) : ''}
     </div>
-  {:else if authStore.loaded}
-    <a href="/login" class="ml-auto text-[15px]">sign in</a>
   {/if}
-  <!-- !loaded → empty bar: no "sign in" flash for a returning admin. -->
+  <!-- Anything other than a loaded admin renders an empty bar; the layout
+       is already redirecting them out. -->
 </header>

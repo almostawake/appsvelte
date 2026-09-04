@@ -1,5 +1,5 @@
 <!--
-  Standard wrapper for any "main" page inside the /admin layout. Owns
+  Standard wrapper for any "main" page inside the (app) layout. Owns
   the page chrome — gutter/top spacing, header (title + optional
   description + divider), and the gap to first content. Pages just
   declare their title, description, and content:

@@ -2,14 +2,16 @@
 
 ## Who signs in (and who doesn't)
 
-Two groups of people use this app; only one of them signs in:
+**Everyone who uses this app signs in.** There is no public or anonymous surface — that's a deliberate change from the earlier shape, not an oversight.
 
-- **End users at `/`** (and any other non-`/admin/*` route): **anonymous**. No sign-in required, no Firestore writes from them. Features live here. Don't gate `/` — public-by-default is the chosen shape. The home page's top bar (`AppHeader.svelte`) shows a "sign in" link and, for an already-signed-in whitelisted user, the admin menu; this *reads* auth state (so Firebase initializes on `/`) but gates nothing.
+- **`/`** is the sign-in screen and the only ungated route: enter a mobile → six-digit code by SMS → enter it → land on `/users`. Signed in iff `request.auth.token.phone_number` exists in `/users/{mobile}`. SMS only — no passwords, no email, no OAuth.
+- **Everything else** lives in the `(app)` route group (`client/src/routes/(app)/`), which owns the single auth gate and the top bar. The parentheses are a SvelteKit layout group: they keep the segment out of the URL, so its pages are served at root level (`/users` today, `/scopes` and friends later) while sharing one gate.
 
-  "Anonymous" means **no Firebase Auth session of any kind** — Firebase's Anonymous Authentication provider (`signInAnonymously()`) counts as a sign-in provider and is equally off-limits. Anonymous visitors also have **no data path, deliberately**: Firestore rules default-deny them, the `api` function is bearer-gated, and callables/Storage serve whitelisted users only. This is not a gap to fill — if a feature at `/` needs to store or fetch per-visitor data, stop and ask the user rather than inventing a path (no anonymous auth, no public rules, no additions to the api no-bearer allowlist). A proper anonymous-data pattern may be added later.
-- **Signed-in users at `/admin/*`**: sign in with **Firebase Auth phone (SMS) sign-in**, gated by the `users` collection in Firestore (doc id = E.164 mobile). Flow: enter mobile → six-digit code by SMS → enter it → signed in iff `request.auth.token.phone_number` exists in `/users/{mobile}`. SMS only — no passwords, no email, no OAuth.
+**A new page is gated by where you put it.** `routes/(app)/thing/+page.svelte` is behind the gate; `routes/thing/+page.svelte` is wide open to the internet. Don't add anything outside the group without asking.
 
-`/admin` is the management surface for the app itself (today: the user whitelist; later: scopes, integrations, etc.). End users never visit it. There is no separate "admin" tier — anyone in `users` can sign in to `/admin` and edit the list (users manage users). The doc id is the mobile, not the Firebase uid, because the number is the only stable identifier we have at invite time (the uid doesn't exist until first sign-in).
+**Firebase's Anonymous Authentication provider (`signInAnonymously()`) is off-limits**, as are public Firestore rules and additions to the `api` function's no-bearer allowlist. If a feature seems to need an unauthenticated data path, stop and ask rather than inventing one.
+
+`/users` is the management surface for the app itself (today the whitelist; later scopes, integrations, etc.). There is no separate "admin" tier — anyone in `users` can sign in and edit the list (users manage users). The doc id is the mobile, not the Firebase uid, because the number is the only stable identifier we have at invite time (the uid doesn't exist until first sign-in).
 
 **Bootstrap:** the project owner's mobile must exist in `/users/{+614XXXXXXXX}` before first sign-in. The `n` installer asks for it at provisioning and seeds it into the real project; the emulator auto-seeds the same number from `MOBILE_OF_APP_OWNER` in `.env` via `cmd-seed-user.mjs` on `npm run start:emulators`. If the list is ever emptied (everyone removes everyone), recovery requires out-of-band access (Firebase Console / Admin SDK).
 
@@ -19,13 +21,13 @@ Two groups of people use this app; only one of them signs in:
 
 ## The one thing that breaks this flow
 
-**Every stored number must be E.164 (`+614XXXXXXXX`), matching Firebase's `phone_number` claim character for character.** The Firestore rule compares the claim against the doc id with no normalising on either side, so a row saved as `0412345678` or `+61 412 345 678` fails the check — and it fails *late*: the user gets a code, types it correctly, signs in, and is then bounced by the `/admin` gate as "not on the list". That's a confusing bug to chase, so every write path normalises first.
+**Every stored number must be E.164 (`+614XXXXXXXX`), matching Firebase's `phone_number` claim character for character.** The Firestore rule compares the claim against the doc id with no normalising on either side, so a row saved as `0412345678` or `+61 412 345 678` fails the check — and it fails *late*: the user gets a code, types it correctly, signs in, and is then bounced by the `(app)` gate as "not on the list". That's a confusing bug to chase, so every write path normalises first.
 
 `normalizeAuMobile` in `functions/src/common/mobile.ts` is the canonical implementation. It exists in three places because two of them run before that file exists in a new project:
 
 | Where | What it seeds / writes |
 |---|---|
-| `functions/src/common/mobile.ts` | the app itself — `/login`, `/admin` add |
+| `functions/src/common/mobile.ts` | the app itself — sign-in at `/`, add at `/users` |
 | `normalize_au_mobile` in the `n` installer | the first whitelist row in the real project |
 | `cmd-seed-user.mjs` | the same row in the Firestore emulator |
 

@@ -6,22 +6,22 @@ does, where it lives, what data it touches.
 
 ## Built and working
 
-- **`/` — the public app.** Placeholder home page with a top nav bar
-  (`AppHeader`): visitors see a "sign in" link top right; signed-in
-  whitelisted users see the admin menu top left and their mobile top right.
-  No auth gate — visitors stay anonymous and make no Firestore writes
-  (Firebase Auth initializes on `/` only to *read* session state). New
-  features go here unless the user says otherwise.
-- **`/admin` — whitelist management.** Signed-in users manage the `users`
-  collection (doc id = E.164 mobile, e.g. `+61412345678`). Presence on the
-  list is what grants sign-in; anyone on it can add/remove anyone (users
-  manage users, no separate admin tier).
-- **Sign-in plumbing.** `/login` only — enter a mobile, get a six-digit code
-  by SMS, enter it. Both steps live on that one route (there is no link to
-  land on, so nothing like the old `/auth/action`). SMS only — no passwords,
-  no email, no OAuth. The shared top bar (`AppHeader.svelte`) links to
-  `/login` and owns the signed-in menu/sign-out. How it works:
+- **`/` — sign in.** The front door and the only ungated route: enter a
+  mobile, get a six-digit code by SMS, enter it, land on `/users`. Both
+  steps live on this one route (there is no link to land on, so nothing
+  like the old `/auth/action`). SMS only — no passwords, no email, no
+  OAuth. There is no public/marketing surface. How it works:
   docs/CLAUDE-AUTH.md.
+- **`/users` — whitelist management.** The landing page once signed in.
+  Manage the `users` collection (doc id = E.164 mobile, e.g.
+  `+61412345678`). Presence on the list is what grants sign-in; anyone on
+  it can add/remove anyone (users manage users, no separate admin tier).
+- **The `(app)` layout group.** `routes/(app)/` holds every signed-in page
+  and owns the single auth gate + top bar (`AppHeader`: menu top left,
+  your mobile top right). Parentheses keep the group out of the URL, so
+  its pages sit at root level. **New features go in
+  `routes/(app)/<name>/`** — anything added outside the group is
+  ungated.
 - **`api` Cloud Function.** The single inbound HTTP endpoint for external
   callers (webhooks, server-to-server), gated by a bearer secret in
   `functions/.env`. No app-specific routes yet. Conventions: docs/CLAUDE-API.md.

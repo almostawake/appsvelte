@@ -18,8 +18,8 @@ export const AuthService = {
    *
    * Nothing here checks the whitelist — Firebase will happily create an
    * account for any number in an allowed SMS region. The whitelist check
-   * happens after sign-in (AuthStore.checkAdmin), and the /admin gate
-   * signs out anyone who isn't on it.
+   * happens after sign-in (AuthStore.checkAdmin), and the (app) layout
+   * gate signs out anyone who isn't on it.
    */
   async sendCode(mobileE164: string): Promise<ConfirmationResult> {
     const { auth } = getFirebase();

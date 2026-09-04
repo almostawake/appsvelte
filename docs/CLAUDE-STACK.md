@@ -19,7 +19,7 @@ The stack is chosen to maximise **first-shot correctness from LLMs**. That means
 | Icons | **lucide-svelte** | De-facto standard, huge set, tree-shakes. |
 | State | **Class-based rune stores** | One class per domain, `$state` + methods + `$derived` co-located. See "State pattern" below. |
 | Backend | **Firebase** — Auth, Firestore, Functions, Storage (private; signed-URL access only) | Same as reference app. All resources in one region, chosen at project creation — see "Region" below. Storage is fully private; access goes through callable-minted signed URLs — see "Storage privacy posture" below. |
-| Auth (default) | **Firebase Auth — phone (SMS) sign-in** + `users` whitelist in Firestore (doc id = E.164 mobile) | Gates `/admin/*` only. End users at `/` are anonymous (no sign-in). Zero passwords, no OAuth consent screen, signed-in users self-administer from `/admin`. Billed per SMS and locked to an allowlisted country — see CLAUDE-AUTH.md before touching either. |
+| Auth (default) | **Firebase Auth — phone (SMS) sign-in** + `users` whitelist in Firestore (doc id = E.164 mobile) | Gates everything except `/`, the sign-in screen; the whole signed-in surface sits in the `(app)` route group. No public/anonymous surface. Zero passwords, no OAuth consent screen, signed-in users self-administer from `/users`. Billed per SMS and locked to an allowlisted country — see CLAUDE-AUTH.md before touching either. |
 | Validation | **Zod** | Used at every I/O boundary: form → Firestore, LLM response → typed object, scraped fields → typed object. |
 | LLM | **Gemini API** (via a Cloud Function that holds the key) | Single LLM SDK across the stack. Key lives server-side. Costs are real — no free tier to hide behind. |
 | Scraping (simple) | `fetch` from a Cloud Function | CORS-safe, no dependencies, use whenever a plain HTTP body is enough. |
@@ -101,7 +101,7 @@ Keep the TTL short (15min is the default for playback-style use; tighten further
 
 ## Scope
 
-The app ships deliberately minimal: auth, an empty home page, and the capability layer below. New features land in their own routes (`src/routes/<feature>/`) and their own `functions/src/<feature>/` folder.
+The app ships deliberately minimal: sign-in, the users whitelist, and the capability layer below. New features land in their own routes (`src/routes/(app)/<feature>/` — inside the group, so they inherit the auth gate) and their own `functions/src/<feature>/` folder.
 
 The capability layer — `src/lib/services/`, `src/lib/state/`, `src/lib/utils/`, `functions/src/common/` (shared zod schemas + types), and `functions/src/` — is what gets extended, not replaced. Keep new code consistent with the patterns already there.
 
@@ -111,7 +111,7 @@ The capability layer — `src/lib/services/`, `src/lib/state/`, `src/lib/utils/`
 
 - `adapter-static` with `fallback: 'index.html'` — SPA mode, client-side routing.
 - Root `+layout.ts` exports `export const ssr = false` and `export const prerender = false` — disables SSR globally so Firebase client SDK code runs without `if (browser)` guards.
-- File-based routing with **route groups** `(groupname)/` for layout boundaries that don't affect the URL (e.g. `(app)/` for authed screens, `(marketing)/` for public pages).
+- File-based routing with **route groups** `(groupname)/` for layout boundaries that don't affect the URL. This app uses one: `(app)/` holds every authed screen and carries the gate, so a new page is gated by where you put it.
 
 ---
 

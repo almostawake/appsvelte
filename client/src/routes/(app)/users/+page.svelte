@@ -1,6 +1,6 @@
 <!--
-  /admin landing — manage users. Add/remove mobile numbers on the `users`
-  collection. Anyone listed here can sign in to /admin and edit this
+  /users — the landing page after sign-in. Add/remove mobile numbers on
+  the `users` collection. Anyone listed here can sign in and edit this
   list (users manage users — there's no separate admin tier).
 -->
 <script lang="ts">
@@ -57,7 +57,7 @@
   }
 </script>
 
-<Page title="users" description="these users can sign in to /admin and manage this list.">
+<Page title="users" description="these users can sign in and manage this list.">
   <ul class="space-y-1">
     {#each usersStore.users as item (item.mobile)}
       <li class="group flex items-center gap-2">
