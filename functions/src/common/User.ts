@@ -1,16 +1,18 @@
 import { z } from 'zod';
 
 /**
- * @collection users/{email}
+ * @collection users/{e164Mobile}
  *
  * One row per signed-in user. Doc presence == "may sign in to /admin".
  *
- * Doc id is the lowercased email — the only stable identifier we have
- * at invite time (Firebase uid doesn't exist until first sign-in).
- * Email-link auth keys on email anyway, so it's the natural id here.
+ * Doc id is the E.164 mobile (+614XXXXXXXX) — it must match the
+ * `phone_number` claim Firebase Auth puts in the ID token character for
+ * character, because that's what the Firestore rule compares against.
+ * Normalise every number through `normalizeAuMobile` before it becomes a
+ * doc id; never store what the user typed.
  *
  * Fields are split into two phases:
- *  - Invite time: { email, admin, addedAt, addedBy } — written by
+ *  - Invite time: { mobile, admin, addedAt, addedBy } — written by
  *    /admin add or the bootstrap seed.
  *  - First sign-in onwards: { uid, lastSignInAt } get filled in (and
  *    `lastSignInAt` refreshed on every subsequent sign-in).
@@ -20,7 +22,7 @@ import { z } from 'zod';
  * to future-proof for non-admin user records later.
  */
 export const userSchema = z.object({
-  email: z.email(),
+  mobile: z.string().regex(/^\+614\d{8}$/),
   admin: z.boolean(),
   addedAt: z.number(),
   addedBy: z.string(),

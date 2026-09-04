@@ -18,10 +18,10 @@ class AuthStore {
   constructor() {
     AuthService.observe(async (u) => {
       this.user = u;
-      if (!u || !u.email) {
+      if (!u || !u.phoneNumber) {
         this.isAdmin = null;
       } else {
-        this.isAdmin = await this.checkAdmin(u.email);
+        this.isAdmin = await this.checkAdmin(u.phoneNumber);
       }
       this.loaded = true;
     });
@@ -35,10 +35,14 @@ class AuthStore {
   // (it can't selectively allow "read your own row but nothing else"
   // without risking info leaks). So both `permission denied` and
   // `doc doesn't exist` collapse to the same answer: not an admin.
-  private checkAdmin = async (email: string): Promise<boolean> => {
+  //
+  // `mobile` comes straight from Firebase's phone_number claim, which is
+  // already E.164 — no normalising here, and none wanted: normalising a
+  // claim would mask a whitelist row stored in the wrong shape.
+  private checkAdmin = async (mobile: string): Promise<boolean> => {
     try {
       const { db } = getFirebase();
-      const ref = doc(db, 'users', email.toLowerCase());
+      const ref = doc(db, 'users', mobile);
       const snap = await getDoc(ref);
       return snap.exists();
     } catch {

@@ -18,7 +18,7 @@
   //   user, not admin   → sign out, /login?denied=1
   //   user, admin       → render the page
   // The template below is also gated on `loaded && isAdmin === true`,
-  // so admin chrome (menu, signed-in email, etc.) never paints for
+  // so admin chrome (menu, signed-in mobile, etc.) never paints for
   // non-admins. Without that gate the layout flashed briefly before
   // this effect's redirect could fire.
   $effect(() => {

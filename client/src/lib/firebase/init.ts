@@ -15,12 +15,13 @@ import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase
 // namespace and admin reads 403 against an empty `users` collection.
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? 'demo-key',
-  // authDomain governs ONLY Firebase Auth's OAuth popup/redirect surfaces
-  // (/__/auth/handler, /__/auth/iframe) — which this app doesn't use. It does
-  // NOT set the email magic-link host; that's the server-side callbackUri.
-  // Email-link sign-in never reads authDomain. We compute it from the current
-  // host at runtime purely so that IF an OAuth provider is ever added it works
-  // same-origin. See docs/CLAUDE-AUTH.md for the full auth-vs-domains map.
+  // authDomain governs Firebase Auth's OAuth popup/redirect surfaces
+  // (/__/auth/handler, /__/auth/iframe), which SMS sign-in doesn't use — the
+  // phone flow talks to identitytoolkit directly and its reCAPTCHA is gated
+  // on the Auth "authorised domains" list in project config, not on this
+  // value. We compute it from the current host at runtime so that IF an
+  // OAuth provider is ever added it works same-origin. See
+  // docs/CLAUDE-AUTH.md for the full auth-vs-domains map.
   // `window` is undefined during prerender and the auth emulator ignores
   // authDomain in DEV, so both fall back to the build-time env var.
   authDomain:

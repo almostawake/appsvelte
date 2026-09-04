@@ -1,61 +1,39 @@
 import {
-  isSignInWithEmailLink,
-  sendSignInLinkToEmail,
-  signInWithEmailLink,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
   signOut as fbSignOut,
   onAuthStateChanged,
+  type Auth,
+  type ConfirmationResult,
   type User,
 } from 'firebase/auth';
 import { getFirebase } from '$lib/firebase/init';
 
-const PENDING_EMAIL_KEY = 'if:pendingSignInEmail';
+const RECAPTCHA_HOST_ID = 'if-recaptcha';
 
 export const AuthService = {
   /**
-   * Send a magic-link email. The link points back at our `/auth/action`
-   * route, which calls completeEmailLink() to finish sign-in.
+   * Text a six-digit code to an E.164 mobile. The returned handle carries
+   * the session; pass it to confirmCode() with whatever the user types.
+   *
+   * Nothing here checks the whitelist — Firebase will happily create an
+   * account for any number in an allowed SMS region. The whitelist check
+   * happens after sign-in (AuthStore.checkAdmin), and the /admin gate
+   * signs out anyone who isn't on it.
    */
-  async sendLink(email: string): Promise<void> {
+  async sendCode(mobileE164: string): Promise<ConfirmationResult> {
     const { auth } = getFirebase();
-    const url = `${window.location.origin}/auth/action`;
-    await sendSignInLinkToEmail(auth, email, {
-      url,
-      handleCodeInApp: true,
-    });
-    // signInWithEmailLink requires the email back at consumption time
-    // (Firebase doesn't put it in the link, to prevent session-fixation
-    // attacks where someone forwards their link to a victim).
-    window.localStorage.setItem(PENDING_EMAIL_KEY, email);
-
-    // Local-dev convenience: no email is actually sent in the auth
-    // emulator. Poll its oobCodes endpoint for the link we just created
-    // and navigate there ourselves. Prod has no /emulator/v1/* route, so
-    // the explicit DEV guard keeps this dead code in production.
-    if (import.meta.env.DEV) {
-      await followEmulatorLink(email);
+    try {
+      return await signInWithPhoneNumber(auth, mobileE164, freshRecaptcha(auth));
+    } catch (e) {
+      // Leave nothing spent behind for the retry the user is about to make.
+      clearRecaptcha();
+      throw e;
     }
   },
 
-  isLink(href: string): boolean {
-    const { auth } = getFirebase();
-    return isSignInWithEmailLink(auth, href);
-  },
-
-  /**
-   * Complete sign-in after the user clicks the magic link. Reads the
-   * email from localStorage; if the user opened the link on a different
-   * device, the caller must prompt for the email and pass it via
-   * `emailOverride`.
-   */
-  async completeEmailLink(href: string, emailOverride?: string): Promise<User> {
-    const { auth } = getFirebase();
-    const email = emailOverride ?? window.localStorage.getItem(PENDING_EMAIL_KEY);
-    if (!email)
-      throw new Error(
-        'No email available — open the link on the same device, or re-enter the email.',
-      );
-    const cred = await signInWithEmailLink(auth, email, href);
-    window.localStorage.removeItem(PENDING_EMAIL_KEY);
+  async confirmCode(confirmation: ConfirmationResult, code: string): Promise<User> {
+    const cred = await confirmation.confirm(code.trim());
     return cred.user;
   },
 
@@ -68,42 +46,80 @@ export const AuthService = {
     const { auth } = getFirebase();
     return onAuthStateChanged(auth, cb);
   },
+
+  /**
+   * Dev-only. The auth emulator sends no SMS — it just records the code it
+   * would have sent. Poll for the one belonging to this number so local
+   * sign-in doesn't mean digging through emulator logs. Prod has no
+   * /emulator/v1/* route, so the DEV guard keeps this out of the bundle.
+   *
+   * Same trick the email-link flow used before phone auth replaced it.
+   */
+  async devCode(mobileE164: string): Promise<string | null> {
+    if (!import.meta.env.DEV) return null;
+    return pollEmulatorCode(mobileE164);
+  },
 };
 
+// Invisible reCAPTCHA. Firebase requires a verifier for every web phone
+// sign-in; "invisible" means the user only ever sees a challenge if
+// Google's risk scoring asks for one. connectAuthEmulator() swaps in a
+// no-op verifier, so this same path works in local dev untouched.
+//
+// A verifier is SINGLE USE. Reusing a solved one doesn't error — it hangs,
+// silently falling back to a reCAPTCHA v2 challenge that never resolves,
+// which looks to the user like a "sending…" button that sticks forever.
+// It bites on the second sign-in of a page session (sign out, sign back
+// in), because module state survives client-side navigation. So: one
+// fresh verifier per send, and tear the old one down first.
+let verifier: RecaptchaVerifier | null = null;
+
+function freshRecaptcha(auth: Auth): RecaptchaVerifier {
+  clearRecaptcha();
+  let host = document.getElementById(RECAPTCHA_HOST_ID);
+  if (!host) {
+    host = document.createElement('div');
+    host.id = RECAPTCHA_HOST_ID;
+    document.body.appendChild(host);
+  }
+  verifier = new RecaptchaVerifier(auth, host, { size: 'invisible' });
+  return verifier;
+}
+
+function clearRecaptcha(): void {
+  try {
+    verifier?.clear();
+  } catch {
+    // Already torn down — nothing to clean up.
+  }
+  verifier = null;
+  // clear() detaches the widget but leaves the host div; a stale one makes
+  // the next render a no-op, so the div goes too and gets rebuilt above.
+  document.getElementById(RECAPTCHA_HOST_ID)?.remove();
+}
+
 /**
- * Dev-only. Polls the Firebase Auth emulator's pending OOB codes for up
- * to 5s, picks the matching email-link entry, and navigates the window
- * to its `oobLink` so the user doesn't have to copy-paste from a log.
- *
- * Hardcoded `demo-not-required` — that's the project id the emulator
- * runs under (see `npm run start:emulators` → `firebase --project
- * demo-not-required ...`). The Firebase SDK's `app.options.projectId`
- * is the *prod* project (from client/.env) so we can't reuse it here.
+ * Hardcoded `demo-not-required` — the project id the emulator runs under
+ * (see `npm run start:emulators`). The SDK's own projectId is the prod
+ * project in a deployed build, so it can't be reused here.
  */
-async function followEmulatorLink(email: string): Promise<void> {
-  const url = 'http://localhost:9099/emulator/v1/projects/demo-not-required/oobCodes';
+async function pollEmulatorCode(mobileE164: string): Promise<string | null> {
+  const url = 'http://localhost:9099/emulator/v1/projects/demo-not-required/verificationCodes';
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
     try {
       const res = await fetch(url);
       if (res.ok) {
-        const { oobCodes } = (await res.json()) as {
-          oobCodes: Array<{ email: string; requestType: string; oobLink: string }>;
+        const { verificationCodes } = (await res.json()) as {
+          verificationCodes: Array<{ phoneNumber: string; code: string }>;
         };
-        const match = oobCodes
-          .filter((c) => c.email === email && c.requestType === 'EMAIL_SIGNIN')
-          .pop();
-        if (match?.oobLink) {
-          window.location.href = match.oobLink;
-          return;
-        }
+        const match = verificationCodes.filter((c) => c.phoneNumber === mobileE164).pop();
+        if (match?.code) return match.code;
       }
     } catch {
       // Endpoint not reachable — keep trying. We're in DEV mode by guard.
     }
     await new Promise((r) => setTimeout(r, 300));
   }
-  // Fell through: leave the user on the "check your email" screen so
-  // they can grab the link manually (e.g. emulator UI hidden behind a
-  // firewall in some setup).
+  return null;
 }

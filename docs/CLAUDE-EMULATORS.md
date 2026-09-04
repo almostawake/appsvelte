@@ -43,9 +43,9 @@ Verify shutdown: `lsof -i :4000 -i :4400 -i :9099 -i :5001 -i :8080 -i :9199 >/d
 
 ## Users whitelist seed
 
-Only `/admin` is gated; end users at `/` are anonymous. The gate rejects sign-in unless the user's email exists at Firestore `/users/{email}`.
+Only `/admin` is gated; end users at `/` are anonymous. The gate rejects sign-in unless the user's mobile exists at Firestore `/users/{+614XXXXXXXX}`.
 
-**Auto-seeded on every `npm run start:emulators`** by `cmd-seed-user.mjs` — backgrounded at emulator start, waits for Firestore readiness, reads the owner's email from `EMAIL_OF_GOOGLE_HOSTING_ACCOUNT` in `.env`, writes the doc if missing. Idempotent. No action required from you on a normal start.
+**Auto-seeded on every `npm run start:emulators`** by `cmd-seed-user.mjs` — backgrounded at emulator start, waits for Firestore readiness, reads the owner's mobile from `MOBILE_OF_APP_OWNER` in `.env`, normalises it to E.164, writes the doc if missing. Idempotent. No action required from you on a normal start.
 
 To add a *different* email manually (e.g. seeding a second user before they can be added through `/admin` itself):
 
@@ -88,7 +88,7 @@ auth.currentUser   // → User | null
 await auth.signOut();
 ```
 
-Sign in goes through the app's email-link flow against the auth emulator's fake-link handler. Don't bypass it.
+Sign in goes through the app's SMS flow against the auth emulator, which sends no message and just records the code. The login page pre-fills it for you (`AuthService.devCode`), so it's type your number → click → click. Don't bypass it.
 
 **Two ways to reset data:**
 

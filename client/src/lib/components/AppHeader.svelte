@@ -3,7 +3,7 @@
   /admin layout. Two states:
 
     signed-in whitelisted user → hamburger menu top left (admin pages +
-                                 sign out) and the signed-in email top right
+                                 sign out) and the signed-in mobile top right
     everyone else              → "sign in" link top right
 
   Importing this pulls in authStore, which initializes Firebase — so the
@@ -14,6 +14,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/state/AuthStore.svelte';
+  import { formatAuMobile } from '$common/mobile';
 
   let menuOpen = $state(false);
 
@@ -81,7 +82,7 @@
       {/if}
     </div>
     <div class="text-fg-faint ml-auto text-[15px]">
-      {authStore.user?.email ?? ''}
+      {authStore.user?.phoneNumber ? formatAuMobile(authStore.user.phoneNumber) : ''}
     </div>
   {:else if authStore.loaded}
     <a href="/login" class="ml-auto text-[15px]">sign in</a>

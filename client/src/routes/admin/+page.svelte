@@ -1,5 +1,5 @@
 <!--
-  /admin landing — manage users. Add/remove emails on the `users`
+  /admin landing — manage users. Add/remove mobile numbers on the `users`
   collection. Anyone listed here can sign in to /admin and edit this
   list (users manage users — there's no separate admin tier).
 -->
@@ -7,9 +7,10 @@
   import { authStore } from '$lib/state/AuthStore.svelte';
   import { usersStore } from '$lib/state/UsersStore.svelte';
   import Page from '$lib/components/Page.svelte';
+  import { formatAuMobile } from '$common/mobile';
 
   let adding = $state(false);
-  let newEmail = $state('');
+  let newMobile = $state('');
   let saving = $state(false);
   let error = $state<string | null>(null);
   let inputEl = $state<HTMLInputElement | null>(null);
@@ -20,13 +21,13 @@
 
   function startAdd() {
     adding = true;
-    newEmail = '';
+    newMobile = '';
     error = null;
   }
 
   function cancelAdd() {
     adding = false;
-    newEmail = '';
+    newMobile = '';
     error = null;
   }
 
@@ -36,8 +37,8 @@
     saving = true;
     error = null;
     try {
-      const me = authStore.user?.email ?? 'unknown';
-      await usersStore.add(newEmail, me);
+      const me = authStore.user?.phoneNumber ?? 'unknown';
+      await usersStore.add(newMobile, me);
       cancelAdd();
     } catch (err) {
       error = (err as Error).message;
@@ -46,10 +47,10 @@
     }
   }
 
-  async function remove(email: string) {
+  async function remove(mobile: string) {
     error = null;
     try {
-      await usersStore.remove(email);
+      await usersStore.remove(mobile);
     } catch (err) {
       error = (err as Error).message;
     }
@@ -58,21 +59,22 @@
 
 <Page title="users" description="these users can sign in to /admin and manage this list.">
   <ul class="space-y-1">
-    {#each usersStore.users as item (item.email)}
+    {#each usersStore.users as item (item.mobile)}
       <li class="group flex items-center gap-2">
-        <span>{item.email}</span>
+        <!-- Stored E.164, shown in the 04xx form people recognise. -->
+        <span>{formatAuMobile(item.mobile)}</span>
         {#if usersStore.users.length > 1}
           <!--
             Two layered hover states. Row-hover (`group`) reveals the ×
             button; button-hover (`group/del`) additionally reveals the
-            "delete <email>" label. Mirrors the `+ add an admin` pattern
+            "delete <mobile>" label. Mirrors the `+ add a user` pattern
             below, just in red.
           -->
           <button
             type="button"
             class="group/del text-err inline-flex items-center gap-2 opacity-0 group-hover:opacity-100"
-            onclick={() => remove(item.email)}
-            aria-label="delete {item.email}"
+            onclick={() => remove(item.mobile)}
+            aria-label="delete {formatAuMobile(item.mobile)}"
           >
             <span class="text-[24px] leading-none">×</span>
             <span class="opacity-0 transition-opacity group-hover/del:opacity-100">delete</span>
@@ -97,16 +99,16 @@
       <form onsubmit={submitAdd} class="flex items-center gap-2">
         <input
           class="tx-input w-72"
-          type="email"
+          type="tel"
           required
           bind:this={inputEl}
-          placeholder="email@domain"
-          bind:value={newEmail}
+          placeholder="0412 345 678"
+          bind:value={newMobile}
           onkeydown={(e) => {
             if (e.key === 'Escape') cancelAdd();
           }}
         />
-        <button class="tx-btn" type="submit" disabled={saving || !newEmail.trim()}>
+        <button class="tx-btn" type="submit" disabled={saving || !newMobile.trim()}>
           {saving ? '…' : 'add'}
         </button>
         <button class="tx-btn-ghost" type="button" onclick={cancelAdd}>cancel</button>

@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 // Backgrounded by `npm run start:emulators`. Waits for the Firestore
-// emulator to come up, reads the project owner's email from .env
-// (EMAIL_OF_GOOGLE_HOSTING_ACCOUNT), and seeds `/users/{email}` if missing. Idempotent.
+// emulator to come up, reads the project owner's mobile from .env
+// (MOBILE_OF_APP_OWNER), and seeds `/users/{+614XXXXXXXX}` if missing.
+// Idempotent.
 //
 // Why: a fresh `emulator-data/` has an empty `users` collection, so
-// the /admin email-link sign-in silently bounces until something
-// seeds the owner. Doing it on every emulator start removes the
-// dependency on the LLM remembering to run a manual probe.
+// the /admin SMS sign-in silently bounces until something seeds the
+// owner. Doing it on every emulator start removes the dependency on the
+// LLM remembering to run a manual probe.
+//
+// The doc id must be the E.164 number exactly as Firebase Auth reports it
+// in the phone_number claim — see functions/src/common/mobile.ts, which
+// this file deliberately duplicates (it runs before any TS build).
 //
 // Pure Node — no `jq`, no `curl`. Uses the emulator's admin-bypass
 // header (`Authorization: Bearer owner`) to skip security rules.
@@ -15,7 +20,7 @@
 // canonical zod schema). This script can't import that file directly —
 // it's a standalone .mjs invoked before any TS build — so the field
 // shape below is a deliberate duplicate. If you change User.ts, mirror
-// the change here.
+// the change here (and in _seed_user in the n installer).
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -34,19 +39,32 @@ const READY_POLL_MS = 500;
 
 async function main() {
   await waitForFirestore();
-  const email = readOwnerEmail();
-  if (!email) return; // already logged the reason
+  const mobile = readOwnerMobile();
+  if (!mobile) return; // already logged the reason
 
-  const present = await isSeeded(email);
+  const present = await isSeeded(mobile);
   if (present) {
-    log(`${email} already on users`);
+    log(`${mobile} already on users`);
     return;
   }
-  await seed(email);
-  log(`seeded ${email} on users`);
+  await seed(mobile);
+  log(`seeded ${mobile} on users`);
 }
 
-function readOwnerEmail() {
+// Mirror of normalizeAuMobile in functions/src/common/mobile.ts. Kept as a
+// duplicate on purpose: this script is a standalone .mjs run before any
+// TypeScript build exists, so it can't import the canonical version.
+function normalizeAuMobile(input) {
+  const digits = input.replace(/\D/g, "");
+  const local = digits.startsWith("61")
+    ? digits.slice(2)
+    : digits.startsWith("0")
+      ? digits.slice(1)
+      : digits;
+  return /^4\d{8}$/.test(local) ? `+61${local}` : null;
+}
+
+function readOwnerMobile() {
   if (!existsSync(ENV_FILE)) {
     log(`${ENV_FILE} missing — skipping seed`);
     return null;
@@ -56,15 +74,21 @@ function readOwnerEmail() {
     for (const raw of text.split('\n')) {
       const line = raw.trim();
       if (!line || line.startsWith('#')) continue;
-      const m = line.match(/^EMAIL_OF_GOOGLE_HOSTING_ACCOUNT\s*=\s*(.*)$/);
+      const m = line.match(/^MOBILE_OF_APP_OWNER\s*=\s*(.*)$/);
       if (!m) continue;
       let v = m[1].trim();
       if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
         v = v.slice(1, -1);
       }
-      if (v) return v;
+      if (!v) break;
+      const e164 = normalizeAuMobile(v);
+      if (!e164) {
+        log(`MOBILE_OF_APP_OWNER="${v}" isn't an australian mobile — skipping seed`);
+        return null;
+      }
+      return e164;
     }
-    log(`EMAIL_OF_GOOGLE_HOSTING_ACCOUNT not set in ${ENV_FILE} — skipping seed`);
+    log(`MOBILE_OF_APP_OWNER not set in ${ENV_FILE} — skipping seed`);
     return null;
   } catch (e) {
     log(`${ENV_FILE} unreadable: ${e.message} — skipping seed`);
@@ -86,19 +110,19 @@ async function waitForFirestore() {
   throw new Error(`Firestore emulator never came up at ${FIRESTORE}`);
 }
 
-async function isSeeded(email) {
-  const url = `${FIRESTORE}/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${encodeURIComponent(email)}`;
+async function isSeeded(mobile) {
+  const url = `${FIRESTORE}/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${encodeURIComponent(mobile)}`;
   const res = await fetch(url, { headers: { Authorization: 'Bearer owner' } });
   if (res.status === 200) return true;
   if (res.status === 404) return false;
   throw new Error(`probe returned unexpected status ${res.status}`);
 }
 
-async function seed(email) {
-  const url = `${FIRESTORE}/v1/projects/${PROJECT_ID}/databases/(default)/documents/users?documentId=${encodeURIComponent(email)}`;
+async function seed(mobile) {
+  const url = `${FIRESTORE}/v1/projects/${PROJECT_ID}/databases/(default)/documents/users?documentId=${encodeURIComponent(mobile)}`;
   const body = {
     fields: {
-      email: { stringValue: email },
+      mobile: { stringValue: mobile },
       admin: { booleanValue: true },
       addedAt: { integerValue: String(Date.now()) },
       addedBy: { stringValue: 'bootstrap' },

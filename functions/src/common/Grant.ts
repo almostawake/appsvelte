@@ -7,9 +7,13 @@ import { z } from 'zod';
  * and metadata captured when a user clicks the /consent link, signs in to
  * Google, and clicks "Allow" on the consent screen.
  *
- * Keyed by lowercased email (matching `/users/{email}`). Anyone who can
- * sign in (i.e. has a /users doc) can also grant; this doc is where the
- * resulting credentials land.
+ * Keyed by the lowercased email on the Google identity token returned by
+ * the consent flow — deliberately NOT the app's own sign-in identity,
+ * which is a mobile number (`/users/{e164Mobile}`). The two are separate
+ * on purpose: you sign in to this app by SMS, but you grant Google access
+ * as whichever Google account you pick on the consent screen. Anyone who
+ * can sign in can also grant; this doc is where the resulting credentials
+ * land.
  *
  * Doc presence == "this user has granted us Google access at least once."
  *

@@ -19,7 +19,7 @@ The stack is chosen to maximise **first-shot correctness from LLMs**. That means
 | Icons | **lucide-svelte** | De-facto standard, huge set, tree-shakes. |
 | State | **Class-based rune stores** | One class per domain, `$state` + methods + `$derived` co-located. See "State pattern" below. |
 | Backend | **Firebase** — Auth, Firestore, Functions, Storage (private; signed-URL access only) | Same as reference app. All resources in one region, chosen at project creation — see "Region" below. Storage is fully private; access goes through callable-minted signed URLs — see "Storage privacy posture" below. |
-| Auth (default) | **Firebase Auth — Email Link sign-in** + `users` whitelist in Firestore (doc id = lowercased email) | Gates `/admin/*` only. End users at `/` are anonymous (no sign-in). Zero passwords, no OAuth consent screen, signed-in users self-administer from `/admin`. See CLAUDE-AUTH.md for details. |
+| Auth (default) | **Firebase Auth — phone (SMS) sign-in** + `users` whitelist in Firestore (doc id = E.164 mobile) | Gates `/admin/*` only. End users at `/` are anonymous (no sign-in). Zero passwords, no OAuth consent screen, signed-in users self-administer from `/admin`. Billed per SMS and locked to an allowlisted country — see CLAUDE-AUTH.md before touching either. |
 | Validation | **Zod** | Used at every I/O boundary: form → Firestore, LLM response → typed object, scraped fields → typed object. |
 | LLM | **Gemini API** (via a Cloud Function that holds the key) | Single LLM SDK across the stack. Key lives server-side. Costs are real — no free tier to hide behind. |
 | Scraping (simple) | `fetch` from a Cloud Function | CORS-safe, no dependencies, use whenever a plain HTTP body is enough. |
@@ -237,7 +237,7 @@ export async function createCategory(uid: string, cat: Category): Promise<void> 
 
 - All Firestore-backed schemas live in **`functions/src/common/`** — single source of truth, shared with the client via the `$common` alias (configured in `client/svelte.config.js`). Files there must stay browser-safe (zod + pure TS only, no `firebase-admin` / Node-only imports).
 - One PascalCase file per type (e.g. `User.ts`). Each file exports a zod schema and a `z.infer`-derived type — never declare a bare `interface` here. Multiple related types may share a file, each with its own `@collection` tag.
-- Every Firestore-backed type carries a `@collection` JSDoc tag with its full path (e.g. `@collection users/{email}` or `@collection users/{uid}/transactions`). Update the tag when renaming/moving collections.
+- Every Firestore-backed type carries a `@collection` JSDoc tag with its full path (e.g. `@collection users/{e164Mobile}` or `@collection users/{uid}/transactions`). Update the tag when renaming/moving collections.
 - Validate at I/O boundaries: parse incoming Firestore snapshots and outgoing writes with the schema (`userSchema.parse(...)`) so a drifting wire shape fails loudly instead of silently corrupting state.
 - Imports: `import { userSchema, type User } from '$common/User'` (client) or `'../common/User'` (functions, relative).
 
@@ -271,7 +271,7 @@ Things the stack deliberately does **not** include, but documents as "if you nee
 
 | Need | Escalation | Notes |
 |---|---|---|
-| Auth provider beyond Email Link (Google/MS OAuth, SAML, MFA…) | **Firebase Auth additional providers** | Email Link is the default and covers the target audience. Only swap if a user explicitly insists. Watch out for the `signInWithRedirect` Chrome 3rd-party cookie gotcha — see CLAUDE-AUTH.md. |
+| Auth provider beyond SMS (Google/MS OAuth, SAML, MFA…) | **Firebase Auth additional providers** | SMS sign-in is the default and covers the target audience. Only swap if a user explicitly insists. Watch out for the `signInWithRedirect` Chrome 3rd-party cookie gotcha — see CLAUDE-AUTH.md. |
 | Heavier scraping (Cloudflare-hard sites, long-running jobs, custom Chromium flags) | **Cloud Run + Playwright** | Cloud Functions can host Puppeteer+stealth fine for the common case; Cloud Run is the next rung when you hit memory, cold-start, or bundle-size walls. |
 | Relational queries | **Firestore with denormalised reads**, or last-resort **Cloud SQL** | NoSQL modelling covers almost every small-app need. Do not add Drizzle or an ORM — the types layer with `@collection` tags is the convention. |
 | Voice / SMS in | **Twilio** | Documented but not wired. Compliance and number provisioning are a real commitment — warn the user before starting. |

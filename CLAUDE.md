@@ -9,7 +9,7 @@ A small web app on Firebase: SvelteKit client (SPA) + Cloud Functions + Firestor
 Three surfaces:
 
 - **`/`** — the public app. Visitors are anonymous: no sign-in, no Firestore writes. New features go here unless the user says otherwise. Don't gate `/` or add a login flow there unless explicitly asked.
-- **`/admin/*`** — the gated management surface (today: the sign-in whitelist). Email-link sign-in, gated by the `users` collection. No passwords, no OAuth.
+- **`/admin/*`** — the gated management surface (today: the sign-in whitelist). SMS-code sign-in, gated by the `users` collection. No passwords, no email, no OAuth.
 - **`api` Cloud Function** — the single inbound HTTP endpoint for external callers (webhooks, server-to-server), gated by its own bearer secret in `functions/.env`.
 
 ## Environments
@@ -28,7 +28,7 @@ Three surfaces:
 | Firestore data / schemas | **docs/CLAUDE-STACK.md** § Data model conventions |
 | Any inbound HTTP endpoint (webhook, server-to-server) | **docs/CLAUDE-API.md** |
 | Running the app on this machine — any request to start, stop, restart, or check it, however worded ("run it up", "shut it down", "is it running?", "the servers", "local", "here") — plus seeding data and driving the app in a browser | **docs/CLAUDE-EMULATORS.md** |
-| Sign-in, magic-link URLs/domains, whitelist | **docs/CLAUDE-AUTH.md** — the one place that says which knob controls the magic-link host (spoiler: not `authDomain`) |
+| Sign-in, SMS cost/abuse, whitelist | **docs/CLAUDE-AUTH.md** — read before touching a stored number: everything hinges on E.164 matching the `phone_number` claim exactly |
 | Deploying, Google API tokens, credentials | **docs/CLAUDE-DEPLOY.md** |
 
 ## Non-technical audience
@@ -38,7 +38,7 @@ The user is a non-developer — a business analyst, project manager, or team lea
 ## Hard rules
 
 - Google access tokens come from `node cmd-auth.mjs --token` only. Never read `~/.if/creds/*` files directly, never hand-roll a token refresh, never `gcloud auth login` / `firebase login` (hook-blocked). Details: docs/CLAUDE-DEPLOY.md.
-- Don't add sign-in providers (OAuth, passwords, Firebase Anonymous auth) without asking — email-link + whitelist is deliberate, and anonymous visitors having no data path is too (docs/CLAUDE-AUTH.md). Point users to docs/CLAUDE-AUTH.md if they ask for "logins".
+- Don't add sign-in providers (OAuth, passwords, email-link, Firebase Anonymous auth) without asking — SMS + whitelist is deliberate, and anonymous visitors having no data path is too (docs/CLAUDE-AUTH.md). Point users to docs/CLAUDE-AUTH.md if they ask for "logins".
 - Two unrelated bearer tokens exist: the **outbound** Google OAuth token (above) and the **inbound** `api` bouncer secret (`CODE_THAT_OTHER_SERVICES_NEED_TO_GET_PAST_OUR_BOUNCER` in `functions/.env`). Different files, different lifetimes — never mix them.
 - Don't deploy unless the user explicitly asks.
 - The Google project comes pre-provisioned: billing linked, key IAM pre-granted, and these APIs enabled (all `*.googleapis.com`): `firebase`, `firestore`, `storage`, `firebasestorage`, `identitytoolkit`, `firebasehosting`, `cloudfunctions`, `cloudbuild`, `run`, `artifactregistry`, `eventarc`, `pubsub`, `cloudscheduler`, `aiplatform` (Vertex AI → Gemini), `speech` (Speech-to-Text), `gmail`, `calendar-json`, `apikeys`, `cloudbilling`. Never tell the user to enable one of these or upgrade billing. **Pre-provisioned services are the DEFAULT for their capability** — when a task needs something this list covers, use the enabled service; never substitute an outside provider or hunt for a personal credential. The canonical case is AI: any LLM call goes through **Vertex AI (Gemini via aiplatform, OAuth/ADC)** — not the Gemini direct API (generativelanguage + API key), and not Anthropic/OpenAI (no such credentials exist; "no API key found" means use Vertex, not improvise). Anything not listed needs enabling first — how: docs/CLAUDE-STACK.md § "Google APIs already enabled".
